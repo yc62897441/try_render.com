@@ -1,6 +1,13 @@
 const express = require('express')
 const app = express()
 
+// passport session 驗證
+const passport = require('./config/passport')
+const session = require('express-session')
+app.use(session({ secret: 'fakeJWT_SECRET', resave: false, saveUninitialized: false }))
+app.use(passport.initialize())
+app.use(passport.session())
+
 // 解析請求的資料(body)
 app.use(express.urlencoded({ extended: true }))
 app.use(express.json())
@@ -17,30 +24,8 @@ app.use(cors(corsOptions))
 
 const PORT = process.env.PORT || 3001
 
-app.get('/', (req, res) => {
-    console.log('========')
-    console.log('========')
-    console.log('========')
-    console.log('get req.body', req.body)
-    console.log('get req.params', req.params)
-    console.log('get req.query', req.query)
-
-    res.send('hello world')
-})
-
-app.post('/', (req, res) => {
-    console.log('========')
-    console.log('========')
-    console.log('========')
-    console.log('post req.body', req.body)
-    console.log('post req.params', req.params)
-    console.log('post req.query', req.query)
-
-    res.json({ b: 'b' })
-})
-
-// const server = app.listen(PORT, () => console.log(`Example app listening on port ${PORT}!`))
 app.listen(PORT, () => console.log(`Example app listening on port ${PORT}!`))
+// const server = app.listen(PORT, () => console.log(`Example app listening on port ${PORT}!`))
 
 const router = require('./routes')
 router(app)
