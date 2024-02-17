@@ -19,16 +19,19 @@ const userController = {
         const { account, password } = req.body
         if (!account || !password) {
             return res.json({ status: 'error', message: '請輸入 account 與密碼' })
+            return res.status(200).json({ status: 'error', message: '請輸入 account 與密碼' })
         }
 
         const user = users[account]
         if (!user) {
             return res.json({ status: 'error', message: '此 account 尚未註冊' })
+            return res.status(200).json({ status: 'error', message: '此 account 尚未註冊' })
         }
         // if (!bcrypt.compareSync(password, user.password)) {
         //     return res.status(401).json({ status: 'error', message: '密碼錯誤' })
         // }
         if (password !== user?.password) {
+            return res.json({ status: 'error', message: '密碼錯誤' })
             return res.status(200).json({ status: 'error', message: '密碼錯誤' })
         }
 
