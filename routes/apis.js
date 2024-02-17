@@ -6,8 +6,8 @@ const catsData = require('../dummyData/catsData')
 
 router.post('/catslist', async (req, res) => {
     try {
-        let offset = req.body.limit || 0
-        let limit = offset + (req.body.limit || 10)
+        const offset = req.body.offset || 0
+        const limit = offset + (req.body.limit || 10)
         const result = { catsData: catsData.slice(offset, limit) }
 
         // 將查詢結果回傳給前端
