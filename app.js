@@ -1,6 +1,10 @@
 const express = require('express')
 const app = express()
 
+if (process.env.NODE_ENV !== 'production') {
+    require('dotenv').config()
+}
+
 // passport session 驗證
 const passport = require('./config/passport')
 const session = require('express-session')
