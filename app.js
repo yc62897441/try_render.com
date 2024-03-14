@@ -1,6 +1,11 @@
 const express = require('express')
 const app = express()
 
+if (process.env.NODE_ENV !== 'production') {
+    require('dotenv').config()
+}
+const PORT = process.env.PORT || 3001
+
 // passport session 驗證
 const passport = require('./config/passport')
 const session = require('express-session')
@@ -21,8 +26,6 @@ const corsOptions = {
     optionsSuccessStatus: 204,
 }
 app.use(cors(corsOptions))
-
-const PORT = process.env.PORT || 3001
 
 app.listen(PORT, () => console.log(`Example app listening on port ${PORT}!`))
 // const server = app.listen(PORT, () => console.log(`Example app listening on port ${PORT}!`))

@@ -378,6 +378,7 @@ const northTaiwanDistricts = {
 
 module.exports = northTaiwanDistricts
 
+// 原始全台灣的資料
 const raw = [
     {
         districts: [
