@@ -1,0 +1,56 @@
+const statusTable = {
+    0: '申請',
+    1: '確認成單',
+    2: '結案',
+    3: '已取消',
+}
+
+const orders = [
+    {
+        id: '00001',
+        catId: 'JFPROfGtQ',
+        userId: 'a001',
+        tel: '0900-001-001',
+        city: 0,
+        district: '100',
+        address: '徐州路xxx號',
+        startDate: '2024-03-12',
+        startTime: '15:20',
+        endDate: '2024-03-12',
+        endTime: '17:30',
+        elseInfo: '',
+        status: 0,
+    },
+    {
+        id: '00002',
+        catId: 'LxcLIxuVT',
+        userId: 'a002',
+        tel: '0900-001-002',
+        city: 1,
+        district: '220',
+        address: '中山路一段xxx號',
+        startDate: '2024-03-13',
+        startTime: '15:20',
+        endDate: '2024-03-13',
+        endTime: '17:30',
+        elseInfo: '',
+        status: 0,
+    },
+    {
+        id: '00003',
+        catId: 'wJyw82pIl',
+        userId: 'a002',
+        tel: '0900-001-003',
+        city: 2,
+        district: '330',
+        address: '正光路xxx號',
+        startDate: '2024-03-13',
+        startTime: '15:20',
+        endDate: '2024-03-13',
+        endTime: '17:30',
+        elseInfo: 'no',
+        status: 0,
+    },
+]
+
+module.exports = orders

@@ -11,7 +11,7 @@ router.get('/userController', async (req, res) => {
         res.json({
             status: 'success',
             message: '',
-            data: northTaiwanDistricts,
+            data: northTaiwanDistricts.northTaiwanDistrictsArray,
         })
     } catch (error) {
         // 處理錯誤情況

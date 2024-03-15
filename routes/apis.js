@@ -4,6 +4,8 @@ const router = express.Router()
 
 const catsData = require('../dummyData/catsData')
 const restaurantsData = require('../dummyData/restaurantsData')
+const orders = require('../dummyData/order')
+const northTaiwanDistricts = require('../dummyData/districts')
 
 router.post('/catslist', async (req, res) => {
     try {
@@ -28,6 +30,40 @@ router.post('/restaurantlist', async (req, res) => {
 
         // 將查詢結果回傳給前端
         res.json(result)
+    } catch (error) {
+        // 處理錯誤情況
+        console.error(error)
+        res.status(500).json({ error: 'Internal Server Error' })
+    }
+})
+
+router.post('/orders', async (req, res) => {
+    // 縣市對照表
+    const table = {
+        0: '台北市',
+        1: '新北市',
+        2: '桃園市',
+        3: '新竹縣',
+        4: '新竹市',
+        5: '基隆市',
+        6: '宜蘭市',
+    }
+    const tempOrders = []
+    orders.forEach((order) => {
+        const obj = {
+            ...order,
+            city: table[order.city], // 轉化為縣市
+            district: northTaiwanDistricts.northTaiwanDistrictsTable[order.city][order.district], // 轉化為行政區
+        }
+        tempOrders.push(obj)
+    })
+
+    try {
+        res.json({
+            status: 'success',
+            message: '',
+            data: tempOrders,
+        })
     } catch (error) {
         // 處理錯誤情況
         console.error(error)
