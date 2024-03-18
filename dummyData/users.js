@@ -51,6 +51,19 @@ const users = {
         district: '302',
         address: '光明六路xxx號',
     },
+    gongwuyong34: {
+        id: 'gongwuyong34',
+        account: 'gongwuyong34',
+        email: 'gongwuyong34@gmail.com',
+        password: 'abc123',
+        name: 'gongwuyong34',
+        age: 18,
+        gender: 0,
+        tel: '0900-001-005',
+        city: 4,
+        district: '302',
+        address: '光復路二段xxx號',
+    },
 }
 
 module.exports = users
