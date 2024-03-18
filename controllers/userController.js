@@ -48,6 +48,27 @@ const userController = {
             user: user,
         })
     },
+    googleSignIn: async (req, res) => {
+        try {
+            console.log('googleSignIn', req.body)
+
+            const response = await Axios.get(
+                `https://www.googleapis.com/drive/v3/about?fields=user&access_token=${access_token}`
+                // https://www.googleapis.com/drive/v2/files?access_token=access_token
+            )
+            console.log('response', response)
+
+            return res.json({
+                status: 'success',
+                message: '登入驗證成功',
+                // token: token,
+                // user: user,
+                response: response,
+            })
+        } catch (error) {
+            console.log(error)
+        }
+    },
 }
 
 module.exports = userController

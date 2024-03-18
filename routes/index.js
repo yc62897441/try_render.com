@@ -11,6 +11,7 @@ const defaultController = require('../controllers/defaultController') // 不須�
 module.exports = (app, passport) => {
     // 無須驗證的路由
     app.post('/auth/signin', userController.signIn)
+    app.post('/auth/google_signin', userController.googleSignIn)
     app.use('/default', defaultController)
 
     // 需要驗證的路由
