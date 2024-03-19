@@ -1,0 +1,3 @@
+; 新增資料
+INSERT INTO cats (uuid, id, url, created_at, updated_at)
+VALUES  (gen_random_uuid(), 'JFPROfGtQ', 'https://cdn2.thecatapi.com/images/JFPROfGtQ.jpg', now(), now());
