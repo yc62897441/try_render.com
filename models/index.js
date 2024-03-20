@@ -27,7 +27,8 @@ db.cat = require('./cat.model.js')(sequelize, Sequelize)
 db.order = require('./order.model.js')(sequelize, Sequelize)
 
 // 設定一對多(還沒確定可否 work)
-db.user.hasMany(db.order)
+db.user.hasMany(db.order, { foreignKey: 'userId' })
+db.order.belongsTo(db.user, { foreignKey: 'userId' })
 
 // 設定兩資料表的對應關係（多對多，所以會多出一個新的表 cat_order）
 db.cat.belongsToMany(db.order, {
@@ -41,20 +42,4 @@ db.order.belongsToMany(db.cat, {
     otherKey: 'catId',
 })
 
-// db.user = require('../models/user.model.js')(sequelize, Sequelize)
-// db.role = require('../models/role.model.js')(sequelize, Sequelize)
-// // 設定兩資料表的對應關係（多對多，所以會多出一個新的表 user_roles）
-// // 一個使用者可能有多個角色
-// // 一個角色也可能有多個使用者
-// db.role.belongsToMany(db.user, {
-//     through: 'user_roles',
-//     foreignKey: 'roleId',
-//     otherKey: 'userId',
-// })
-// db.user.belongsToMany(db.role, {
-//     through: 'user_roles',
-//     foreignKey: 'userId',
-//     otherKey: 'roleId',
-// })
-// db.ROLES = ['user', 'admin', 'moderator']
 module.exports = db

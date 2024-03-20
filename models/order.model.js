@@ -25,6 +25,9 @@ module.exports = (sequelize, Sequelize) => {
         totalPrice: {
             type: Sequelize.INTEGER,
         },
+        status: {
+            type: Sequelize.INTEGER,
+        },
     })
     return Order
 }

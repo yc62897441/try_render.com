@@ -2,6 +2,8 @@
 const express = require('express')
 const router = express.Router()
 
+const { v4: uuidv4 } = require('uuid')
+
 // 資料()
 const catsData = require('../dummyData/catsData')
 const usersData = require('../dummyData/users')
@@ -13,10 +15,11 @@ const northTaiwanDistricts = require('../dummyData/districts')
 const db = require('../models/index') // 引入 /models/index.js 匯出的程式碼(即 sequelize model 定義檔)
 const Cat = db.cat
 const User = db.user
+const Order = db.order
 
 // 呼叫 sync function 將會依 model 定義內容産生資料表，force 參數值為 true 將會重建已存在的資料表
 db.sequelize
-    .sync({ force: true })
+    .sync({ force: false })
     .then(() => {
         console.log('Drop and Resync Database with { force: true }')
         // initialDbData() // 産生資料表後，呼叫 initialDbData function 為 cats table 新增初始資料
@@ -92,62 +95,90 @@ router.post('/restaurantlist', async (req, res) => {
     }
 })
 
+// 取回訂單s
 router.post('/orders', async (req, res) => {
     try {
-        // 縣市對照表
-        const table = {
-            0: '台北市',
-            1: '新北市',
-            2: '桃園市',
-            3: '新竹縣',
-            4: '新竹市',
-            5: '基隆市',
-            6: '宜蘭市',
-        }
-        const tempOrders = []
+        // console.log('req.body', req.body)
+        // 依照 userId 去搜尋，如果不存在 userId 則取回所有
+        const userId = req.body.userId || null
+        const whereCondition = {}
+        if (userId) whereCondition.userId = userId
 
-        // TODO: 等待正式導入資料庫
-        orders.forEach((order) => {
-            const obj = {
-                ...order,
-                city: table[order.city], // 轉化為縣市
-                district:
-                    northTaiwanDistricts.northTaiwanDistrictsTable[order.city][order.district], // 轉化為行政區
-            }
-            tempOrders.push(obj)
-        })
-
+        const orders = await Order.findAll({ raw: true, where: whereCondition })
+        // console.log('orders', orders)
         res.json({
             status: 'success',
             message: '',
-            data: tempOrders,
+            data: orders,
         })
     } catch (error) {
         console.error(error)
         res.status(500).json({ error: 'Internal Server Error' })
     }
 })
-router.put('/orders', async (req, res) => {
+// 新增訂單
+router.post('/order', async (req, res) => {
     try {
-        const { orderId, submitType } = req.body
-        let isUpdateCompleted = false
-        orders.forEach((order) => {
-            if (order.id === orderId) {
-                // TODO: 等待正式導入資料庫
-                order.status =
-                    submitType === 'confirmOrder'
-                        ? 1
-                        : submitType === 'completeOrder'
-                        ? 2
-                        : submitType === 'cancelOrder'
-                        ? 3
-                        : ''
-                isUpdateCompleted = true
-            }
+        // console.log('req.body', req.body)
+        await Order.create({
+            ...req.body,
+            id: uuidv4(),
+            startDateTime: new Date(req.body.startDateTime),
+            endDateTime: new Date(req.body.endDateTime),
         })
         res.json({
-            status: isUpdateCompleted ? 'success' : 'fail',
-            message: isUpdateCompleted ? '訂單更新成功' : '訂單更新失敗',
+            status: 'success',
+            message: '',
+        })
+    } catch (error) {
+        console.error(error)
+        res.status(500).json({ error: 'Internal Server Error' })
+    }
+})
+// 編輯訂單
+router.put('/order', async (req, res) => {
+    try {
+        // console.log('req.body', req.body)
+        const { id, status } = req.body
+        const order = await Order.findByPk(id)
+        if (!order) {
+            return res.json({
+                status: 'fail',
+                message: '訂單更新失敗',
+            })
+        }
+
+        // 更新訂單
+        await order.update({
+            status: status,
+        })
+        res.json({
+            status: 'success',
+            message: '訂單更新成功',
+        })
+    } catch (error) {
+        console.error(error)
+        res.status(500).json({ error: 'Internal Server Error' })
+    }
+})
+// 刪除訂單
+router.delete('/order', async (req, res) => {
+    try {
+        // console.log('req.body', req.body)
+        const { id } = req.body
+        const order = await Order.findByPk(id)
+        if (!order) {
+            return res.json({
+                status: 'fail',
+                message: '訂單刪除失敗',
+            })
+        }
+
+        // 更新訂單
+        await order.destroy()
+        res.json({
+            status: 'success',
+            message: '訂單刪除成功',
         })
     } catch (error) {
         console.error(error)
