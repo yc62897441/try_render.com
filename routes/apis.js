@@ -12,6 +12,7 @@ const orders = require('../dummyData/order')
 const northTaiwanDistricts = require('../dummyData/districts')
 
 // 資料庫
+const { Op } = require('sequelize')
 const db = require('../models/index') // 引入 /models/index.js 匯出的程式碼(即 sequelize model 定義檔)
 const Cat = db.cat
 const User = db.user
@@ -61,17 +62,68 @@ router.post('/catslist', async (req, res) => {
         const offset = req.body.offset || 0
         const limit = offset + (req.body.limit || 10)
 
-        // TODO: 透過時間區間來搜尋 OK 的貓咪
-        const timeSpanFormData = req.body.timeSpanFormData
-        const startDateTime = `${timeSpanFormData.startDate} ${timeSpanFormData.startTime}`
-        const endDateTime = `${timeSpanFormData.endDate} ${timeSpanFormData.endTime}`
-        console.log('timeSpanFormData', timeSpanFormData)
-        console.log('startDateTime', startDateTime)
-        console.log('endDateTime', endDateTime)
+        // 過濾出時間上是允許的 cats (3步驟)
+        // 1.透過時間區間來搜尋時間有重疊的訂單
+        const { startDate, startTime, endDate, endTime } = req.body.timeSpanFormData
+        const startDateTime = `${startDate} ${startTime}`
+        const endDateTime = `${endDate} ${endTime}`
+        let whereCondition = {}
+        whereCondition = {
+            [Op.or]: [
+                {
+                    [Op.and]: [
+                        { startDateTime: { [Op.gte]: new Date(startDateTime) } },
+                        { startDateTime: { [Op.lt]: new Date(endDateTime) } },
+                    ],
+                },
+                {
+                    [Op.and]: [
+                        { endDateTime: { [Op.gt]: new Date(startDateTime) } },
+                        { endDateTime: { [Op.lte]: new Date(endDateTime) } },
+                    ],
+                },
+                {
+                    [Op.and]: [
+                        { startDateTime: { [Op.lt]: new Date(startDateTime) } },
+                        { endDateTime: { [Op.gt]: new Date(endDateTime) } },
+                    ],
+                },
+            ],
+        }
+        const orders = await Order.findAll({
+            where: whereCondition,
+            // raw: true,
+        })
 
-        const result = { catsData: catsData.slice(offset, limit) }
+        // 2.透過重疊的訂單，找出有哪些 catIds 是時間上有衝突的
+        const ordersWithCats = await Promise.all(
+            orders.map(async (order) => {
+                const cats = await order.getCats()
+                const catIds = cats.map((cat) => cat.id)
+                return {
+                    ...order.dataValues,
+                    startDateTime: new Date(order.startDateTime).toString(),
+                    endDateTime: new Date(order.endDateTime).toString(),
+                    catIds,
+                }
+            })
+        )
+        const notAvailableCatIdsTable = {}
+        ordersWithCats.forEach((order) => {
+            order.catIds.forEach((catId) => {
+                if (!notAvailableCatIdsTable[catId]) notAvailableCatIdsTable[catId] = true
+            })
+        })
+        console.log('notAvailableCatIdsTable', notAvailableCatIdsTable)
+
+        // 3.透過有衝突的 catIds，過濾出時間上是允許的 cats
+        const cats = await Cat.findAll({
+            raw: true,
+        })
+        const catsAvailable = cats.filter((cat) => !notAvailableCatIdsTable[cat.id])
 
         // 將查詢結果回傳給前端
+        const result = { catsData: catsAvailable.slice(offset, limit) }
         res.json(result)
     } catch (error) {
         // 處理錯誤情況
@@ -104,28 +156,87 @@ router.post('/orders', async (req, res) => {
         const whereCondition = {}
         if (userId) whereCondition.userId = userId
 
-        const orders = await Order.findAll({ raw: true, where: whereCondition })
-        // console.log('orders', orders)
+        const orders = await Order.findAll({
+            // raw: true,
+            where: whereCondition,
+        })
+        // 使用 Promise.all() 等待所有訂單的貓咪關聯查詢完成
+        const ordersWithCats = await Promise.all(
+            orders.map(async (order) => {
+                const cats = await order.getCats()
+                const catIds = cats.map((cat) => cat.id) // 提取貓咪的 ID
+                return { ...order.dataValues, catIds } // 返回包含貓咪 ID 的訂單物件
+            })
+        )
+        console.log('Orders with cat IDs:', ordersWithCats)
+
         res.json({
             status: 'success',
             message: '',
-            data: orders,
+            data: ordersWithCats,
         })
     } catch (error) {
         console.error(error)
         res.status(500).json({ error: 'Internal Server Error' })
     }
 })
+// 取回訂單
+router.post('/order/id', async (req, res) => {
+    try {
+        console.log('req.body', req.body)
+        const { orderId } = req.body
+
+        // 獲取訂單
+        const order = await Order.findByPk(orderId)
+        if (!order) throw new Error('Order not found')
+
+        // 使用 get 方法獲取與訂單關聯的貓咪
+        const cats = await order.getCats()
+        const catIds = cats.map((cat) => cat.id) // 提取貓咪的 ID
+        const orderWithCats = {
+            ...order.dataValues,
+            catIds,
+        }
+        console.log('orderWithCats', orderWithCats)
+
+        res.json({
+            status: 'success',
+            message: '',
+            data: orderWithCats,
+        })
+    } catch (error) {
+        console.error(error)
+        res.status(500).json({ error: 'Internal Server Error' })
+    }
+})
+
 // 新增訂單
 router.post('/order', async (req, res) => {
     try {
-        // console.log('req.body', req.body)
-        await Order.create({
-            ...req.body,
+        console.log('req.body', req.body)
+        const {
+            userId,
+            orderPhone,
+            orderAddress,
+            startDateTime,
+            endDateTime,
+            totalPrice,
+            status,
+            catId,
+        } = req.body
+        const order = await Order.create({
             id: uuidv4(),
-            startDateTime: new Date(req.body.startDateTime),
-            endDateTime: new Date(req.body.endDateTime),
+            userId: userId,
+            orderPhone: orderPhone,
+            orderAddress: orderAddress,
+            startDateTime: new Date(startDateTime),
+            endDateTime: new Date(endDateTime),
+            totalPrice: totalPrice,
+            status: status,
         })
+        // 建立訂單與貓咪的關聯
+        await order.setCats(catId)
+
         res.json({
             status: 'success',
             message: '',

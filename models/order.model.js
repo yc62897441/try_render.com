@@ -28,6 +28,9 @@ module.exports = (sequelize, Sequelize) => {
         status: {
             type: Sequelize.INTEGER,
         },
+        // elseInfo: {
+        //     type: Sequelize.STRING,
+        // },
     })
     return Order
 }
