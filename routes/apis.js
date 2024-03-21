@@ -62,65 +62,73 @@ router.post('/catslist', async (req, res) => {
         const offset = req.body.offset || 0
         const limit = offset + (req.body.limit || 10)
 
-        // 過濾出時間上是允許的 cats (3步驟)
-        // 1.透過時間區間來搜尋時間有重疊的訂單
         const { startDate, startTime, endDate, endTime } = req.body.timeSpanFormData
-        const startDateTime = `${startDate} ${startTime}`
-        const endDateTime = `${endDate} ${endTime}`
-        let whereCondition = {}
-        whereCondition = {
-            [Op.or]: [
-                {
-                    [Op.and]: [
-                        { startDateTime: { [Op.gte]: new Date(startDateTime) } },
-                        { startDateTime: { [Op.lt]: new Date(endDateTime) } },
-                    ],
-                },
-                {
-                    [Op.and]: [
-                        { endDateTime: { [Op.gt]: new Date(startDateTime) } },
-                        { endDateTime: { [Op.lte]: new Date(endDateTime) } },
-                    ],
-                },
-                {
-                    [Op.and]: [
-                        { startDateTime: { [Op.lt]: new Date(startDateTime) } },
-                        { endDateTime: { [Op.gt]: new Date(endDateTime) } },
-                    ],
-                },
-            ],
+        const notAvailableCatIdsTable = {} // 儲存時間上不允許的貓咪的 ids
+
+        // 過濾出時間上是允許的 cats (3步驟)
+        if (startDate && startTime && endDate && endTime) {
+            // 有指定時間區間，須執行步驟 1、2
+            // 1.透過時間區間來搜尋時間有重疊的訂單
+            const startDateTime = `${startDate} ${startTime}`
+            const endDateTime = `${endDate} ${endTime}`
+            let whereCondition = {
+                [Op.or]: [
+                    {
+                        [Op.and]: [
+                            { startDateTime: { [Op.gte]: new Date(startDateTime) } },
+                            { startDateTime: { [Op.lt]: new Date(endDateTime) } },
+                        ],
+                    },
+                    {
+                        [Op.and]: [
+                            { endDateTime: { [Op.gt]: new Date(startDateTime) } },
+                            { endDateTime: { [Op.lte]: new Date(endDateTime) } },
+                        ],
+                    },
+                    {
+                        [Op.and]: [
+                            { startDateTime: { [Op.lt]: new Date(startDateTime) } },
+                            { endDateTime: { [Op.gt]: new Date(endDateTime) } },
+                        ],
+                    },
+                ],
+            }
+            const orders = await Order.findAll({
+                where: whereCondition,
+                // raw: true,
+            })
+
+            // 2.透過重疊的訂單，找出有哪些 catIds 是時間上有衝突的，並且把有衝突的貓咪 ids 存到 notAvailableCatIdsTable 之中
+            const ordersWithCats = await Promise.all(
+                orders.map(async (order) => {
+                    const cats = await order.getCats()
+                    const catIds = cats.map((cat) => cat.id)
+                    return {
+                        ...order.dataValues,
+                        startDateTime: new Date(order.startDateTime).toString(),
+                        endDateTime: new Date(order.endDateTime).toString(),
+                        catIds,
+                    }
+                })
+            )
+            ordersWithCats.forEach((order) => {
+                order.catIds.forEach((catId) => {
+                    notAvailableCatIdsTable[catId] = true
+                })
+            })
         }
-        const orders = await Order.findAll({
-            where: whereCondition,
-            // raw: true,
-        })
-
-        // 2.透過重疊的訂單，找出有哪些 catIds 是時間上有衝突的
-        const ordersWithCats = await Promise.all(
-            orders.map(async (order) => {
-                const cats = await order.getCats()
-                const catIds = cats.map((cat) => cat.id)
-                return {
-                    ...order.dataValues,
-                    startDateTime: new Date(order.startDateTime).toString(),
-                    endDateTime: new Date(order.endDateTime).toString(),
-                    catIds,
-                }
-            })
-        )
-        const notAvailableCatIdsTable = {}
-        ordersWithCats.forEach((order) => {
-            order.catIds.forEach((catId) => {
-                if (!notAvailableCatIdsTable[catId]) notAvailableCatIdsTable[catId] = true
-            })
-        })
-        console.log('notAvailableCatIdsTable', notAvailableCatIdsTable)
-
+        // 沒有指定時間區間，直接執行驟 3
         // 3.透過有衝突的 catIds，過濾出時間上是允許的 cats
         const cats = await Cat.findAll({
             raw: true,
         })
-        const catsAvailable = cats.filter((cat) => !notAvailableCatIdsTable[cat.id])
+        let catsAvailable = null
+        // 如果 notAvailableCatIdsTable 非空物件(表示存在需要排除的 catIds)，才需要額外做 filter
+        if (Object.keys(notAvailableCatIdsTable)?.length > 0) {
+            catsAvailable = cats.filter((cat) => !notAvailableCatIdsTable[cat.id])
+        } else {
+            catsAvailable = cats
+        }
 
         // 將查詢結果回傳給前端
         const result = { catsData: catsAvailable.slice(offset, limit) }
@@ -168,7 +176,7 @@ router.post('/orders', async (req, res) => {
                 return { ...order.dataValues, catIds } // 返回包含貓咪 ID 的訂單物件
             })
         )
-        console.log('Orders with cat IDs:', ordersWithCats)
+        // console.log('Orders with cat IDs:', ordersWithCats)
 
         res.json({
             status: 'success',
@@ -183,7 +191,7 @@ router.post('/orders', async (req, res) => {
 // 取回訂單
 router.post('/order/id', async (req, res) => {
     try {
-        console.log('req.body', req.body)
+        // console.log('req.body', req.body)
         const { orderId } = req.body
 
         // 獲取訂單
@@ -197,7 +205,7 @@ router.post('/order/id', async (req, res) => {
             ...order.dataValues,
             catIds,
         }
-        console.log('orderWithCats', orderWithCats)
+        // console.log('orderWithCats', orderWithCats)
 
         res.json({
             status: 'success',
@@ -213,7 +221,7 @@ router.post('/order/id', async (req, res) => {
 // 新增訂單
 router.post('/order', async (req, res) => {
     try {
-        console.log('req.body', req.body)
+        // console.log('req.body', req.body)
         const {
             userId,
             orderPhone,
