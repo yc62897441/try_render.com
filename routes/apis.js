@@ -4,6 +4,14 @@ const router = express.Router()
 
 const { v4: uuidv4 } = require('uuid')
 
+// [note] node-csv 筆記
+// https://pjchender.dev/npm/npm-node-csv/
+// 使用 Stream
+const csv = require('csv')
+const path = require('path')
+const fs = require('fs')
+const fsPromises = fs.promises
+
 // 資料()
 const catsData = require('../dummyData/catsData')
 const usersData = require('../dummyData/users')
@@ -74,22 +82,13 @@ router.post('/catslist', async (req, res) => {
             let whereCondition = {
                 [Op.or]: [
                     {
-                        [Op.and]: [
-                            { startDateTime: { [Op.gte]: new Date(startDateTime) } },
-                            { startDateTime: { [Op.lt]: new Date(endDateTime) } },
-                        ],
+                        [Op.and]: [{ startDateTime: { [Op.gte]: new Date(startDateTime) } }, { startDateTime: { [Op.lt]: new Date(endDateTime) } }],
                     },
                     {
-                        [Op.and]: [
-                            { endDateTime: { [Op.gt]: new Date(startDateTime) } },
-                            { endDateTime: { [Op.lte]: new Date(endDateTime) } },
-                        ],
+                        [Op.and]: [{ endDateTime: { [Op.gt]: new Date(startDateTime) } }, { endDateTime: { [Op.lte]: new Date(endDateTime) } }],
                     },
                     {
-                        [Op.and]: [
-                            { startDateTime: { [Op.lt]: new Date(startDateTime) } },
-                            { endDateTime: { [Op.gt]: new Date(endDateTime) } },
-                        ],
+                        [Op.and]: [{ startDateTime: { [Op.lt]: new Date(startDateTime) } }, { endDateTime: { [Op.gt]: new Date(endDateTime) } }],
                     },
                 ],
             }
@@ -222,16 +221,8 @@ router.post('/order/id', async (req, res) => {
 router.post('/order', async (req, res) => {
     try {
         // console.log('req.body', req.body)
-        const {
-            userId,
-            orderPhone,
-            orderAddress,
-            startDateTime,
-            endDateTime,
-            totalPrice,
-            status,
-            catId,
-        } = req.body
+        const { userId, orderPhone, orderAddress, startDateTime, endDateTime, totalPrice, status, catId } = req.body
+
         const order = await Order.create({
             id: uuidv4(),
             userId: userId,
@@ -304,6 +295,85 @@ router.delete('/order', async (req, res) => {
         res.status(500).json({ error: 'Internal Server Error' })
     }
 })
+
+// 讀取 order csv 並且寫入到資料庫
+router.post('/readOrderCSVtoDB', async (req, res) => {
+    try {
+        const cat_orderCSV = await readAndParseCSV('../db/cat_order.csv')
+        const ordersCSV = await readAndParseCSV('../db/orders.csv')
+
+        const ordersHead = ordersCSV.slice(0, 1)
+        const ordersContents = ordersCSV.slice(1)
+
+        const cat_orderContents = cat_orderCSV.slice(1)
+
+        ordersContents.forEach(async (content) => {
+            const obj = {}
+            content.forEach((item, index) => {
+                obj[ordersHead[0][index]] = item
+            })
+            const order = await Order.create(obj)
+
+            const catId = []
+            cat_orderContents.forEach((cat_orderContent) => {
+                // cat_orderCSV 是 Cat 與 Order 兩張表多對多關係的中間表，cat_orderContent[3] 紀錄的是 orderId，cat_orderContent[2] 紀錄的是 catId
+                if (cat_orderContent[3] === content[0]) catId.push(cat_orderContent[2])
+            })
+
+            // 建立訂單與貓咪的關聯
+            await order.setCats(catId)
+        })
+
+        res.json({
+            status: 'success',
+            message: '',
+        })
+    } catch (error) {
+        console.error(error)
+        res.status(500).json({ error: 'Internal Server Error' })
+    }
+})
+async function readAndParseCSV(filePath) {
+    try {
+        // STEP 1: 讀取 CSV 檔
+        const inputFilePath = path.resolve(__dirname, filePath)
+        const input = await fsPromises.readFile(inputFilePath)
+
+        // STEP 2：建立讀出 CSV 用的陣列和 parser
+        const output = []
+        const parser = csv.parse({
+            delimiter: ',',
+        })
+
+        // STEP 3-1：建立對應事件 - 讀取資料
+        parser.on('readable', function () {
+            let record
+            while ((record = parser.read())) {
+                output.push(record)
+            }
+        })
+
+        // STEP 3-2：錯誤處理
+        parser.on('error', function (err) {
+            console.error(err.message)
+        })
+
+        // STEP 3-3：取得最後 output 的結果
+        parser.on('end', function () {
+            // console.log('output', output)
+        })
+
+        // STEP 4：放入預備讀取的內容
+        parser.write(input)
+
+        // STEP 5：關閉 readable stream
+        parser.end()
+
+        return output
+    } catch (error) {
+        console.log('error', error)
+    }
+}
 
 router.get('/data', async (req, res) => {
     try {
