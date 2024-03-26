@@ -82,13 +82,22 @@ router.post('/catslist', async (req, res) => {
             let whereCondition = {
                 [Op.or]: [
                     {
-                        [Op.and]: [{ startDateTime: { [Op.gte]: new Date(startDateTime) } }, { startDateTime: { [Op.lt]: new Date(endDateTime) } }],
+                        [Op.and]: [
+                            { startDateTime: { [Op.gte]: new Date(startDateTime) } },
+                            { startDateTime: { [Op.lt]: new Date(endDateTime) } },
+                        ],
                     },
                     {
-                        [Op.and]: [{ endDateTime: { [Op.gt]: new Date(startDateTime) } }, { endDateTime: { [Op.lte]: new Date(endDateTime) } }],
+                        [Op.and]: [
+                            { endDateTime: { [Op.gt]: new Date(startDateTime) } },
+                            { endDateTime: { [Op.lte]: new Date(endDateTime) } },
+                        ],
                     },
                     {
-                        [Op.and]: [{ startDateTime: { [Op.lt]: new Date(startDateTime) } }, { endDateTime: { [Op.gt]: new Date(endDateTime) } }],
+                        [Op.and]: [
+                            { startDateTime: { [Op.lt]: new Date(startDateTime) } },
+                            { endDateTime: { [Op.gt]: new Date(endDateTime) } },
+                        ],
                     },
                 ],
             }
@@ -220,8 +229,18 @@ router.post('/order/id', async (req, res) => {
 // 新增訂單
 router.post('/order', async (req, res) => {
     try {
-        // console.log('req.body', req.body)
-        const { userId, orderPhone, orderAddress, startDateTime, endDateTime, totalPrice, status, catId } = req.body
+        console.log('req.body', req.body)
+        const {
+            userId,
+            orderPhone,
+            orderAddress,
+            startDateTime,
+            endDateTime,
+            totalPrice,
+            status,
+            catId,
+            // elseInfo,
+        } = req.body
 
         const order = await Order.create({
             id: uuidv4(),
