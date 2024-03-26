@@ -4,6 +4,9 @@ const router = express.Router()
 
 const { v4: uuidv4 } = require('uuid')
 
+// 使用 notion db
+const { Client } = require('@notionhq/client')
+
 // [note] node-csv 筆記
 // https://pjchender.dev/npm/npm-node-csv/
 // 使用 Stream
@@ -393,6 +396,25 @@ async function readAndParseCSV(filePath) {
         console.log('error', error)
     }
 }
+
+router.post('/notion_db', async (req, res) => {
+    try {
+        console.log('req.body', req.body)
+        const notion = new Client({ auth: process.env.NOTION_DB_SECRET }) // Initializing a client
+        const response = await notion.databases.query({
+            database_id: process.env.NOTION_WORKSPACE_DB_DATABASE,
+        })
+
+        res.json({
+            status: 'success',
+            message: 'notion_db',
+            results: response?.results,
+        })
+    } catch (error) {
+        console.error(error)
+        res.status(500).json({ error: 'Internal Server Error' })
+    }
+})
 
 router.get('/data', async (req, res) => {
     try {
