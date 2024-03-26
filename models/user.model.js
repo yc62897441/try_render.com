@@ -34,6 +34,9 @@ module.exports = (sequelize, Sequelize) => {
         address: {
             type: Sequelize.STRING,
         },
+        isAdmin: {
+            type: Sequelize.STRING,
+        },
     })
     return User
 }

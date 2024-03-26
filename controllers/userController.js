@@ -13,34 +13,38 @@ const Axios = require('axios')
 // 先使用假資料
 const users = require('../dummyData/users')
 
+// 資料庫
+const db = require('../models/index') // 引入 /models/index.js 匯出的程式碼(即 sequelize model 定義檔)
+const User = db.user
+
 // 簽發 token
 const userController = {
-    signIn: (req, res) => {
+    signIn: async (req, res) => {
         console.log('signIn', req.body)
 
         const { account, password } = req.body
         if (!account || !password) {
             return res.json({ status: 'error', message: '發生錯誤' }) // 資安考量，不顯示錯誤的差異訊息
-            return res.json({ status: 'error', message: '請輸入 account 與密碼' })
-            return res.status(200).json({ status: 'error', message: '請輸入 account 與密碼' })
+            // return res.json({ status: 'error', message: '請輸入 account 與密碼' })
+            // return res.status(200).json({ status: 'error', message: '請輸入 account 與密碼' })
         }
 
-        const user = users[account]
+        const user = await User.findByPk(account, { raw: true })
         if (!user) {
             return res.json({ status: 'error', message: '發生錯誤' }) // 資安考量，不顯示錯誤的差異訊息
-            return res.json({ status: 'error', message: '此 account 尚未註冊' })
-            return res.status(200).json({ status: 'error', message: '此 account 尚未註冊' })
+            // return res.json({ status: 'error', message: '此 account 尚未註冊' })
+            // return res.status(200).json({ status: 'error', message: '此 account 尚未註冊' })
         }
         // if (!bcrypt.compareSync(password, user.password)) {
         //     return res.status(401).json({ status: 'error', message: '密碼錯誤' })
         // }
         if (password !== user?.password) {
             return res.json({ status: 'error', message: '發生錯誤' }) // 資安考量，不顯示錯誤的差異訊息
-            return res.json({ status: 'error', message: '密碼錯誤' })
-            return res.status(200).json({ status: 'error', message: '密碼錯誤' })
+            // return res.json({ status: 'error', message: '密碼錯誤' })
+            // return res.status(200).json({ status: 'error', message: '密碼錯誤' })
         }
 
-        // 簽發token
+        // 簽發 token
         let payload = { id: user.id }
         let token = jwt.sign(payload, JWT_SECRET, { expiresIn: 86400 })
         return res.json({
@@ -74,15 +78,16 @@ const userController = {
             //       emailAddress: 'gongwuyong34@gmail.com'
             //     }
             //   }
-            let user = null
-            for (userId in users) {
-                if (users[userId].email === emailAddress) user = users[userId]
-            }
+
+            const user = await User.findOne({ where: { email: emailAddress }, raw: true })
+            // 以下為使用 dummyData 模擬資料庫時的寫法
+            // let user = null
+            // for (userId in users) {
+            //     if (users[userId].email === emailAddress) user = users[userId]
+            // }
             console.log('user', user)
 
-            if (!user) {
-                return res.json({ status: 'error', message: '發生錯誤' }) // 資安考量，不顯示錯誤的差異訊息
-            }
+            if (!user) return res.json({ status: 'error', message: '發生錯誤' })
 
             // 簽發token
             let payload = { id: user.id }
