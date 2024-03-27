@@ -6,6 +6,7 @@ const { v4: uuidv4 } = require('uuid')
 
 // 使用 notion db
 const { Client } = require('@notionhq/client')
+const fetch = require('node-fetch')
 
 // [note] node-csv 筆記
 // https://pjchender.dev/npm/npm-node-csv/
@@ -397,18 +398,124 @@ async function readAndParseCSV(filePath) {
     }
 }
 
+// 使用 fetch 來操作 notion db，需要給 fetch 帶 headers
+const headers = {
+    Authorization: `Bearer ${process.env.NOTION_DB_SECRET}`,
+    'Content-Type': 'application/json',
+    'Notion-Version': '2021-08-16',
+}
+// 讀取 Notion DB 資料
 router.post('/notion_db', async (req, res) => {
     try {
         console.log('req.body', req.body)
         const notion = new Client({ auth: process.env.NOTION_DB_SECRET }) // Initializing a client
         const response = await notion.databases.query({
             database_id: process.env.NOTION_WORKSPACE_DB_DATABASE,
+            filter: {
+                property: 'userId',
+                rich_text: {
+                    contains: '002',
+                },
+            },
         })
+        console.log('response', response)
+
+        // 取回的內容沒有包含 notion database 所儲存的資料
+        // const response = await fetch(
+        //     `https://api.notion.com/v1/databases/${process.env.NOTION_WORKSPACE_DB_DATABASE}/`,
+        //     {
+        //         method: 'GET',
+        //         headers,
+        //     }
+        // )
+        // console.log('response', response)
+        // console.log('response.json()', await response.json())
 
         res.json({
             status: 'success',
             message: 'notion_db',
             results: response?.results,
+        })
+    } catch (error) {
+        console.error(error)
+        res.status(500).json({ error: 'Internal Server Error' })
+    }
+})
+// 新增一筆資料到 Notion DB
+router.post('/add_notion_db', async (req, res) => {
+    try {
+        console.log('req.body', req.body)
+        const data = { ...req.body }
+
+        const notion = new Client({ auth: process.env.NOTION_DB_SECRET }) // Initializing a client
+        const newPage = await notion.pages.create(data)
+        console.log('newPage', newPage)
+
+        // 使用 fetch 來新增資料
+        // const page = await fetch(`https://api.notion.com/v1/pages`, {
+        //     method: 'POST',
+        //     headers: headers,
+        //     body: JSON.stringify(data),
+        // })
+
+        res.json({
+            status: 'success',
+            message: 'notion_db',
+        })
+    } catch (error) {
+        console.error(error)
+        res.status(500).json({ error: 'Internal Server Error' })
+    }
+})
+// 更新一筆資料到 Notion DB
+router.post('/put_notion_db', async (req, res) => {
+    try {
+        console.log('req.body', req.body)
+        const data = { ...req.body }
+        const pageId = data.pageId
+        const properties = data.properties
+
+        const notion = new Client({ auth: process.env.NOTION_DB_SECRET }) // Initializing a client
+        const newPage = await notion.pages.update({ page_id: pageId, properties: properties })
+        console.log('newPage', newPage)
+
+        // 使用 fetch 來更新資料
+        // const page = await fetch(`https://api.notion.com/v1/pages/${pageId}`, {
+        //     method: 'PATCH',
+        //     headers: headers,
+        //     body: JSON.stringify(data),
+        // })
+
+        res.json({
+            status: 'success',
+            message: 'notion_db',
+        })
+    } catch (error) {
+        console.error(error)
+        res.status(500).json({ error: 'Internal Server Error' })
+    }
+})
+// 刪除一筆資料到 Notion DB
+router.post('/delete_notion_db', async (req, res) => {
+    try {
+        console.log('req.body', req.body)
+        const data = { ...req.body }
+        const pageId = data.pageId
+
+        const notion = new Client({ auth: process.env.NOTION_DB_SECRET }) // Initializing a client
+        const newPage = await notion.pages.update({ page_id: pageId, archived: true })
+        console.log('newPage', newPage)
+
+        // 使用 fetch 來刪除資料
+        // const page = await fetch(`https://api.notion.com/v1/pages/${pageId}`, {
+        //     method: 'PATCH',
+        //     headers: headers,
+        //     body: JSON.stringify({ archived: true }),
+        // })
+
+        res.json({
+            status: 'success',
+            message: 'notion_db',
         })
     } catch (error) {
         console.error(error)
