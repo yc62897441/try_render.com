@@ -420,7 +420,7 @@ router.post('/notion_db', async (req, res) => {
         })
         console.log('response', response)
 
-        // 取回的內容沒有包含 notion database 所儲存的資料
+        // 使用 fetch 取回 notion database，資料庫的訊息
         // const response = await fetch(
         //     `https://api.notion.com/v1/databases/${process.env.NOTION_WORKSPACE_DB_DATABASE}/`,
         //     {
@@ -428,13 +428,44 @@ router.post('/notion_db', async (req, res) => {
         //         headers,
         //     }
         // )
-        // console.log('response', response)
-        // console.log('response.json()', await response.json())
+
+        // 使用 fetch 取回所有資料
+        // const fetchResponse = await fetch(
+        //     `https://api.notion.com/v1/databases/${process.env.NOTION_WORKSPACE_DB_DATABASE}/query`,
+        //     {
+        //         method: 'POST',
+        //         headers,
+        //         body: JSON.stringify({
+        //             // 可以新增查詢參數，如篩選條件等
+        //             filter: {
+        //                 property: 'userId',
+        //                 rich_text: {
+        //                     contains: '002',
+        //                 },
+        //             },
+        //         }),
+        //     }
+        // )
+        // console.log('fetchResponse', fetchResponse)
+        // const response = await fetchResponse.json()
+        // console.log('fetchResponse.json()', response)
+
+        // 使用 fetch 取回單筆資料
+        // const fetchResponse = await fetch(
+        //     `https://api.notion.com/v1/pages/908228ef-8304-4774-94c9-1b2ca1495b82`,
+        //     {
+        //         method: 'GET',
+        //         headers: headers,
+        //     }
+        // )
+        // console.log('fetchResponse', fetchResponse)
+        // const response = await fetchResponse.json()
+        // console.log('fetchResponse.json()', response)
 
         res.json({
             status: 'success',
             message: 'notion_db',
-            results: response?.results,
+            results: response?.results || response,
         })
     } catch (error) {
         console.error(error)
